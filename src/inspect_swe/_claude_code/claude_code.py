@@ -246,7 +246,7 @@ def claude_code(
             # output).  Providing an apiKeyHelper in settings.json
             # supplies a key through a path that does work.
             api_key = agent_env.get("ANTHROPIC_AUTH_TOKEN", "dummy-key-for-bridge")
-            await _seed_claude_config(sbox, api_key, user, cwd)
+            await _seed_claude_config(sbox, api_key, user, cwd, agent_env)
 
             # centaur mode uses human_cli with custom instructions and bash rc
             if centaur:
@@ -370,13 +370,19 @@ async def _seed_claude_config(
     api_key: str,
     user: str | None,
     cwd: str | None,
+    agent_env: dict[str, str] | None = None,
 ) -> None:
-    """Write ~/.claude/settings.json with an apiKeyHelper.
+    """Write `$HOME/.claude/settings.json` with an apiKeyHelper.
 
     Claude Code 2.1.37 does not use ANTHROPIC_AUTH_TOKEN from the
     environment for API requests.  Providing an apiKeyHelper in
     settings.json supplies the key through a path it does use.
+
+    Honors `HOME` from `agent_env` so callers running `sandbox="local"`
+    can redirect this write to a tempdir (e.g. `HOME=/tmp/cc-safe-home`)
+    instead of clobbering the real user's `~/.claude/settings.json`.
     """
+    env = agent_env or {}
     await sbox.exec(
         cmd=[
             "bash",
@@ -388,6 +394,7 @@ async def _seed_claude_config(
         ],
         user=user,
         cwd=cwd,
+        env=env,
     )
 
 
