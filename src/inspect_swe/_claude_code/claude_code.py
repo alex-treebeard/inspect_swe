@@ -142,13 +142,10 @@ def claude_code(
     # resolve attempts
     attempts = AgentAttempts(attempts) if isinstance(attempts, int) else attempts
 
-    # allocate session_id once per agent instance so that all calls to execute()
-    # for the same sample share the same session. this enables --resume <id> to
-    # replay the full conversation history through the bridge on continuation runs,
-    # giving the model proper context (unlike --continue which only sends the new turn).
-    session_id = str(uuid.uuid4())
-
     async def execute(state: AgentState) -> AgentState:
+        # allocate a fresh session_id per sample so concurrent / sequential samples
+        # in a multi-epoch run don't collide on "session already in use".
+        session_id = str(uuid.uuid4())
         # determine port (use new port for each execution of agent on sample)
         MODEL_PORT = "claude_code_model_port"
         port = store().get(MODEL_PORT, 3000) + 1
